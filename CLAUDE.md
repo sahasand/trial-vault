@@ -14,7 +14,8 @@ in V1 — shared database, open access.
 - Database: Firebase Firestore
 - Validation: Zod (API route schemas)
 - External API: ClinicalTrials.gov API v2 (no key required)
-- Deployment: Vercel
+- Deployment: Vercel (https://trialvault.vercel.app)
+- Repository: https://github.com/sahasand/trial-vault.git
 - Package manager: npm
 
 ## Architecture Rules
@@ -100,21 +101,33 @@ Document fields:
 
 ## Build Commands
 - Dev server: npm run dev
-- Build check: npm run build
+- Type check (safe while dev server runs): npx tsc --noEmit
+- Build check: npm run build (do NOT run while dev server is active — overwrites .next)
 - Lint: npm run lint
+- Deploy: vercel --prod
+
+## Deployment Notes
+- Vercel project: sahasands-projects/trialvault
+- Vercel CLI linked via `vercel link`
+- Environment variables set via `printf` (not `echo`) to avoid trailing newlines
+- 6 NEXT_PUBLIC_FIREBASE_* env vars configured for production, preview, and development
+- Auto-deploys from GitHub are connected
+- Delete confirmation requires typing trial name to prevent accidental deletions
 
 ## Important Constraints
 - Do NOT modify working features when adding new ones
 - Always verify dev server runs after changes
+- Do NOT run `npm run build` while dev server is running — use `npx tsc --noEmit` instead
 - Ask before installing new dependencies
 - No authentication logic anywhere in V1
 - All form fields validate before submission
 - NCT ID stored uppercase and trimmed
 - Never commit .env.local or firebase service account keys
 - Clear .next cache (rm -rf .next) when dev server shows stale 404s
+- When adding Vercel env vars via CLI, use `printf` not `echo` to avoid trailing newlines
 
 ## Current Status
 - Phase: B (Core Features)
-- Completed: Project setup, CRUD, ClinicalTrials.gov import (NCT ID + keyword search), code quality improvements (Zod, shared constants, ErrorBanner, logger, custom hooks)
+- Completed: Project setup, CRUD, ClinicalTrials.gov import (NCT ID + keyword search), code quality improvements (Zod, shared constants, ErrorBanner, logger, custom hooks), enhanced trial cards (status accent bars, conditional fields, relative timestamps), soft delete confirmation, brief title display on detail page, Vercel deployment with Firebase env vars
 - In Progress: Nothing
 - Blocked: Nothing
