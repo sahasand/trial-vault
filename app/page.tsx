@@ -1,101 +1,139 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
+import type { Trial } from "@/lib/types";
+import TrialCard from "@/components/trials/trial-card";
+import TrialFilters from "@/components/trials/trial-filters";
+import SearchBar from "@/components/ui/search-bar";
+import ErrorBanner from "@/components/ui/error-banner";
+import { Plus, FlaskConical } from "lucide-react";
+
+function SkeletonCard() {
+  return (
+    <div className="rounded-[10px] border border-border/60 bg-card p-4 shadow-sm animate-pulse">
+      <div className="flex gap-2 mb-3">
+        <div className="h-5 w-24 rounded-md bg-muted" />
+        <div className="h-5 w-16 rounded-md bg-muted" />
+      </div>
+      <div className="h-5 w-3/4 rounded-md bg-muted mb-3" />
+      <div className="h-4 w-1/2 rounded-md bg-muted mb-2" />
+      <div className="h-4 w-1/3 rounded-md bg-muted mb-4" />
+      <div className="h-5 w-20 rounded-full bg-muted" />
+    </div>
+  );
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [trials, setTrials] = useState<Trial[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [phase, setPhase] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    async function fetchTrials() {
+      try {
+        const res = await fetch("/api/trials");
+        if (!res.ok) throw new Error("Failed to fetch trials");
+        const data = await res.json();
+        setTrials(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load trials");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTrials();
+  }, []);
+
+  const filtered = useMemo(() => {
+    let result = trials;
+
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.trialName.toLowerCase().includes(q) ||
+          t.nctId.toLowerCase().includes(q)
+      );
+    }
+
+    if (phase) {
+      result = result.filter((t) => t.phase === phase);
+    }
+
+    return result;
+  }, [trials, search, phase]);
+
+  function handlePhaseChange(val: string) {
+    setPhase(val === "all" ? "" : val);
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      {/* Search + Filters */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex-1">
+          <SearchBar value={search} onChange={setSearch} />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <TrialFilters phase={phase} onPhaseChange={handlePhaseChange} />
+      </div>
+
+      {/* Count */}
+      {!loading && !error && (
+        <p className="mt-4 text-sm text-muted-foreground">
+          {filtered.length} trial{filtered.length !== 1 ? "s" : ""} in
+          database
+        </p>
+      )}
+
+      {/* Loading skeleton */}
+      {loading && (
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      )}
+
+      {/* Error */}
+      {error && <ErrorBanner message={error} className="mt-8" />}
+
+      {/* Empty state */}
+      {!loading && !error && filtered.length === 0 && (
+        <div className="mt-16 flex flex-col items-center text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <FlaskConical className="size-8 text-primary" />
+          </div>
+          <p className="mt-4 text-lg font-semibold text-foreground">
+            {trials.length === 0 ? "No trials yet" : "No matches found"}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {trials.length === 0
+              ? "Be the first to add a clinical trial record."
+              : "Try adjusting your search or filters."}
+          </p>
+          {trials.length === 0 && (
+            <Link
+              href="/trials/new"
+              className="mt-6 inline-flex min-h-[44px] items-center gap-1.5 rounded-[10px] bg-accent-orange px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-orange-hover active:scale-[0.98]"
+            >
+              <Plus className="size-4" />
+              Add Your First Trial
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Trial Grid */}
+      {!loading && !error && filtered.length > 0 && (
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((trial) => (
+            <TrialCard key={trial.id} trial={trial} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
