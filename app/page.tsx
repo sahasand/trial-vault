@@ -9,6 +9,29 @@ import SearchBar from "@/components/ui/search-bar";
 import ErrorBanner from "@/components/ui/error-banner";
 import { Plus, FlaskConical } from "lucide-react";
 
+const STATUS_PILL_STYLES: Record<string, { active: string; inactive: string }> = {
+  Recruiting: {
+    active: "bg-emerald-600 text-white border-emerald-600",
+    inactive: "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50",
+  },
+  Active: {
+    active: "bg-blue-600 text-white border-blue-600",
+    inactive: "bg-white text-blue-700 border-blue-300 hover:bg-blue-50",
+  },
+  Completed: {
+    active: "bg-gray-500 text-white border-gray-500",
+    inactive: "bg-white text-gray-600 border-gray-300 hover:bg-gray-50",
+  },
+  Terminated: {
+    active: "bg-red-600 text-white border-red-600",
+    inactive: "bg-white text-red-700 border-red-300 hover:bg-red-50",
+  },
+  Unknown: {
+    active: "bg-amber-500 text-white border-amber-500",
+    inactive: "bg-white text-amber-700 border-amber-300 hover:bg-amber-50",
+  },
+};
+
 function SkeletonCard() {
   return (
     <div className="rounded-[10px] border border-border/60 bg-card p-4 shadow-sm animate-pulse">
@@ -30,6 +53,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [phase, setPhase] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   useEffect(() => {
     async function fetchTrials() {
@@ -47,6 +71,17 @@ export default function Home() {
     fetchTrials();
   }, []);
 
+  // Count trials per status (from full dataset)
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const t of trials) {
+      if (t.status) {
+        counts[t.status] = (counts[t.status] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [trials]);
+
   const filtered = useMemo(() => {
     let result = trials;
 
@@ -63,12 +98,24 @@ export default function Home() {
       result = result.filter((t) => t.phase === phase);
     }
 
+    if (statusFilter) {
+      result = result.filter((t) => t.status === statusFilter);
+    }
+
     return result;
-  }, [trials, search, phase]);
+  }, [trials, search, phase, statusFilter]);
 
   function handlePhaseChange(val: string) {
     setPhase(val === "all" ? "" : val);
   }
+
+  function handleStatusClick(status: string) {
+    setStatusFilter((prev) => (prev === status ? "" : status));
+  }
+
+  // Ordered list of statuses that exist in data
+  const STATUS_ORDER = ["Recruiting", "Active", "Completed", "Terminated", "Unknown"];
+  const activeStatuses = STATUS_ORDER.filter((s) => statusCounts[s]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -80,12 +127,31 @@ export default function Home() {
         <TrialFilters phase={phase} onPhaseChange={handlePhaseChange} />
       </div>
 
-      {/* Count */}
-      {!loading && !error && (
-        <p className="mt-4 text-sm text-muted-foreground">
-          {filtered.length} trial{filtered.length !== 1 ? "s" : ""} in
-          database
-        </p>
+      {/* Status snapshot bar */}
+      {!loading && !error && trials.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {activeStatuses.map((status) => {
+            const isActive = statusFilter === status;
+            const styles = STATUS_PILL_STYLES[status] ?? STATUS_PILL_STYLES["Unknown"];
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => handleStatusClick(status)}
+                className={`inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${
+                  isActive ? styles.active : styles.inactive
+                }`}
+              >
+                {status}:
+                <span className="tabular-nums">{statusCounts[status]}</span>
+              </button>
+            );
+          })}
+          <span className="ml-auto text-sm text-muted-foreground">
+            {filtered.length} trial{filtered.length !== 1 ? "s" : ""}
+            {statusFilter || phase || search ? "" : " in database"}
+          </span>
+        </div>
       )}
 
       {/* Loading skeleton */}

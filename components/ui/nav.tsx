@@ -9,9 +9,14 @@ export default function Nav() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2 min-h-[44px]">
           <FlaskConical className="size-5 text-brand" />
-          <span className="text-lg font-bold tracking-tight text-brand">
-            TrialVault
-          </span>
+          <div className="flex flex-col">
+            <span className="text-lg font-bold tracking-tight text-brand leading-tight">
+              TrialVault
+            </span>
+            <span className="text-[10px] sm:text-xs text-gray-400 leading-tight">
+              Clinical trial intelligence for research teams
+            </span>
+          </div>
         </Link>
         <Link
           href="/trials/new"
