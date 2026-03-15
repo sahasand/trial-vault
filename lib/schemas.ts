@@ -33,6 +33,11 @@ export const createTrialSchema = z.object({
     .optional()
     .default("")
     .transform((v) => v.trim()),
+  officialTitle: z
+    .string()
+    .optional()
+    .default("")
+    .transform((v) => v.trim()),
 });
 
 export const updateTrialSchema = z
@@ -62,6 +67,10 @@ export const updateTrialSchema = z
       .optional(),
     status: z.string().optional(),
     notes: z
+      .string()
+      .transform((v) => v.trim())
+      .optional(),
+    officialTitle: z
       .string()
       .transform((v) => v.trim())
       .optional(),

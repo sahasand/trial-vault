@@ -11,6 +11,7 @@ export interface Trial {
   primaryEndpoint: string;
   status: string;
   notes: string;
+  officialTitle?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

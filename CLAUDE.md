@@ -52,7 +52,8 @@ in V1 — shared database, open access.
 - NCT ID (matches /^NCT\d{8,11}$/i) → direct lookup, instant auto-fill
 - Keywords → search API, dropdown with up to 5 results to pick from
 - Only fills empty form fields — never overwrites user input
-- Field mapping from API: briefTitle→trialName, phases→phase,
+- On import: officialTitle = full API title (locked), trialName = same initially (user edits to acronym)
+- Field mapping from API: briefTitle→trialName+officialTitle, phases→phase,
   enrollmentInfo.count→sampleSize, conditions→indication,
   leadSponsor.name→sponsor, primaryOutcomes[0].measure→primaryEndpoint,
   overallStatus→status
@@ -63,7 +64,8 @@ Collection: trials
 Document fields:
 - id: string (auto-generated Firestore document ID)
 - nctId: string (unique, e.g. "NCT04280705")
-- trialName: string (required)
+- trialName: string (required, display name / short acronym)
+- officialTitle: string (optional, full title from ClinicalTrials.gov, read-only in form)
 - phase: string (I, II, III, IV, N/A)
 - sampleSize: number
 - indication: string (therapeutic area)
@@ -128,6 +130,6 @@ Document fields:
 
 ## Current Status
 - Phase: B (Core Features)
-- Completed: Project setup, CRUD, ClinicalTrials.gov import (NCT ID + keyword search), code quality improvements (Zod, shared constants, ErrorBanner, logger, custom hooks), enhanced trial cards (status accent bars, conditional fields, relative timestamps), soft delete confirmation, brief title display on detail page, Vercel deployment with Firebase env vars
+- Completed: Project setup, CRUD, ClinicalTrials.gov import (NCT ID + keyword search), code quality improvements (Zod, shared constants, ErrorBanner, logger, custom hooks), enhanced trial cards (status accent bars, conditional fields, relative timestamps), soft delete confirmation, display name + full title fields, status snapshot filter bar, nav tagline, Vercel deployment with Firebase env vars
 - In Progress: Nothing
 - Blocked: Nothing

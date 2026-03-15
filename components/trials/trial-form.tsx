@@ -39,6 +39,7 @@ const INITIAL_FORM: TrialFormData = {
   primaryEndpoint: "",
   status: "",
   notes: "",
+  officialTitle: "",
 };
 
 type LookupResult =
@@ -94,6 +95,10 @@ export default function TrialForm({
     let count = 0;
     const updates: Partial<TrialFormData> = {};
 
+    // Always set officialTitle from API
+    if (data.trialName) {
+      updates.officialTitle = data.trialName;
+    }
     if (!form.trialName && data.trialName) {
       updates.trialName = data.trialName;
       count++;
@@ -235,6 +240,7 @@ export default function TrialForm({
         sponsor: form.sponsor.trim(),
         primaryEndpoint: form.primaryEndpoint.trim(),
         notes: form.notes.trim(),
+        officialTitle: form.officialTitle?.trim() ?? "",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save trial.");
@@ -367,17 +373,33 @@ export default function TrialForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="trialName" className={lbl}>
-          Trial Name <span className="text-destructive">*</span>
+          Display Name <span className="text-destructive">*</span>
         </Label>
         <Input
           id="trialName"
           value={form.trialName}
           onChange={(e) => updateField("trialName", e.target.value)}
-          placeholder="e.g. KEYNOTE-522"
+          placeholder="e.g. KEYNOTE-522 or a short acronym"
           required
           className={field}
         />
+        {form.officialTitle && (
+          <p className="text-[11px] text-muted-foreground/70 mt-1">
+            Edit this to a short name or acronym. The full title is preserved below.
+          </p>
+        )}
       </div>
+
+      {form.officialTitle && (
+        <div className="space-y-1.5">
+          <Label className={lbl}>
+            Full Title (from ClinicalTrials.gov)
+          </Label>
+          <div className="rounded-[10px] bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground leading-relaxed">
+            {form.officialTitle}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label htmlFor="nctId" className={lbl}>

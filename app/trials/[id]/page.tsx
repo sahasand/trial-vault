@@ -223,7 +223,17 @@ export default function TrialDetailPage() {
             Core Info
           </h2>
           <dl className="divide-y divide-border/40">
-            <FieldRow label="Official Title" value={trial.trialName} />
+            <FieldRow label="Display Name" value={trial.trialName} />
+            {trial.officialTitle && (
+              <div className="flex flex-col gap-0.5 py-3">
+                <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Full Title
+                </dt>
+                <dd className="text-[13px] leading-relaxed text-muted-foreground">
+                  {trial.officialTitle}
+                </dd>
+              </div>
+            )}
             <FieldRow label="NCT ID" value={trial.nctId} mono />
             <FieldRow
               label="Phase"

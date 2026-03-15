@@ -100,6 +100,7 @@ export default function EditTrialPage() {
           sponsor: trial.sponsor,
           primaryEndpoint: trial.primaryEndpoint,
           status: trial.status,
+          officialTitle: trial.officialTitle,
           notes: trial.notes,
         }}
         isSubmitting={isSubmitting}
