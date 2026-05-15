@@ -27,5 +27,5 @@ export function useTrialById(id: string) {
     fetchTrial();
   }, [id]);
 
-  return { trial, loading, error };
+  return { trial, setTrial, loading, error };
 }

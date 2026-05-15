@@ -14,8 +14,9 @@ export interface Trial {
   officialTitle?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  lastSyncedAt?: Timestamp;
 }
 
 export type UpdateTrialData = Partial<
-  Omit<Trial, "id" | "createdAt" | "updatedAt">
+  Omit<Trial, "id" | "createdAt" | "updatedAt" | "lastSyncedAt">
 >;

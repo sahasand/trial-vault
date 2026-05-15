@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useTrialById } from "@/lib/hooks";
 import { STATUS_COLORS, PHASE_COLORS } from "@/lib/constants";
+import { firestoreTimestampToDate, timeAgo } from "@/lib/utils";
 import ErrorBanner from "@/components/ui/error-banner";
 import {
   AlertDialog,
@@ -17,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, RefreshCw } from "lucide-react";
 
 function FieldRow({
   label,
@@ -50,10 +51,13 @@ function FieldRow({
 export default function TrialDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const { trial, loading, error: fetchError } = useTrialById(id);
+  const { trial, setTrial, loading, error: fetchError } = useTrialById(id);
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
+  const [refreshSuccess, setRefreshSuccess] = useState(false);
 
   async function handleDelete() {
     setDeleting(true);
@@ -66,6 +70,28 @@ export default function TrialDetailPage() {
     } catch {
       setDeleteError("Failed to delete trial. Please try again.");
       setDeleting(false);
+    }
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    setRefreshError("");
+    setRefreshSuccess(false);
+    try {
+      const res = await fetch(`/api/trials/${id}/refresh`, { method: "POST" });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(body?.error ?? "Failed to refresh trial.");
+      }
+      setTrial(body);
+      setRefreshSuccess(true);
+      setTimeout(() => setRefreshSuccess(false), 3000);
+    } catch (err) {
+      setRefreshError(
+        err instanceof Error ? err.message : "Failed to refresh trial."
+      );
+    } finally {
+      setRefreshing(false);
     }
   }
 
@@ -102,6 +128,19 @@ export default function TrialDetailPage() {
     STATUS_COLORS[trial.status] ?? STATUS_COLORS["Unknown"];
   const phaseColor =
     PHASE_COLORS[trial.phase] ?? PHASE_COLORS["N/A"];
+
+  const syncDate = firestoreTimestampToDate(trial.lastSyncedAt);
+  const syncAgeDays = syncDate
+    ? (Date.now() - syncDate.getTime()) / 86_400_000
+    : null;
+  const syncBadgeClass =
+    syncAgeDays === null
+      ? "text-muted-foreground"
+      : syncAgeDays > 90
+        ? "text-red-600"
+        : syncAgeDays > 30
+          ? "text-amber-600"
+          : "text-muted-foreground";
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
@@ -147,10 +186,17 @@ export default function TrialDetailPage() {
             {trial.nctId}
           </p>
         )}
+
+        {/* Last synced badge */}
+        {syncDate && (
+          <p className={`mt-1 text-xs ${syncBadgeClass}`}>
+            Synced from ClinicalTrials.gov {timeAgo(syncDate)}
+          </p>
+        )}
       </div>
 
       {/* Action buttons */}
-      <div className="mt-6 flex gap-3">
+      <div className="mt-6 flex flex-wrap gap-3">
         <Link
           href={`/trials/${id}/edit`}
           className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[10px] border border-primary/30 bg-primary/5 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
@@ -158,6 +204,20 @@ export default function TrialDetailPage() {
           <Pencil className="size-4" />
           Edit
         </Link>
+
+        {trial.nctId && (
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[10px] border border-border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`size-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </button>
+        )}
 
         <AlertDialog onOpenChange={(open) => { if (open) setConfirmText(""); }}>
           <AlertDialogTrigger
@@ -214,6 +274,14 @@ export default function TrialDetailPage() {
 
       {/* Error banner (for delete failures) */}
       {deleteError && <ErrorBanner message={deleteError} className="mt-4" />}
+
+      {/* Refresh feedback */}
+      {refreshError && <ErrorBanner message={refreshError} className="mt-4" />}
+      {refreshSuccess && (
+        <div className="mt-4 rounded-[8px] border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          Refreshed from ClinicalTrials.gov.
+        </div>
+      )}
 
       {/* Sections */}
       <div className="mt-8 space-y-8">

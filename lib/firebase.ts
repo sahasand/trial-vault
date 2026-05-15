@@ -59,14 +59,20 @@ export async function getTrialById(id: string): Promise<Trial | null> {
 }
 
 export async function createTrial(
-  data: Omit<Trial, "id" | "createdAt" | "updatedAt">
+  data: Omit<Trial, "id" | "createdAt" | "updatedAt" | "lastSyncedAt">
 ): Promise<string> {
   try {
-    const docRef = await addDoc(collection(db, TRIALS_COLLECTION), {
+    const payload: Record<string, unknown> = {
       ...data,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    };
+    // officialTitle is only set by the CT.gov import flow, so its presence
+    // signals this trial was synced from the API at create time.
+    if (data.officialTitle) {
+      payload.lastSyncedAt = serverTimestamp();
+    }
+    const docRef = await addDoc(collection(db, TRIALS_COLLECTION), payload);
     return docRef.id;
   } catch (error) {
     logger.error("Error creating trial", error);
@@ -86,6 +92,23 @@ export async function updateTrial(
     });
   } catch (error) {
     logger.error("Error updating trial", error);
+    throw error;
+  }
+}
+
+export async function syncTrial(
+  id: string,
+  data: UpdateTrialData
+): Promise<void> {
+  try {
+    const docRef = doc(db, TRIALS_COLLECTION, id);
+    await updateDoc(docRef, {
+      ...data,
+      updatedAt: serverTimestamp(),
+      lastSyncedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    logger.error("Error syncing trial", error);
     throw error;
   }
 }

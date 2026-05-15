@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Trial } from "@/lib/types";
 import { STATUS_COLORS } from "@/lib/constants";
+import { firestoreTimestampToDate, timeAgo } from "@/lib/utils";
 import {
   Users,
   Building2,
@@ -29,21 +30,6 @@ const STATUS_ACCENT: Record<string, string> = {
   Unknown: "border-l-amber-500",
 };
 
-function timeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  const years = Math.floor(months / 12);
-  return `${years}y ago`;
-}
-
 interface TrialCardProps {
   trial: Trial;
 }
@@ -54,12 +40,7 @@ export default function TrialCard({ trial }: TrialCardProps) {
   const accentColor =
     STATUS_ACCENT[trial.status] ?? "border-l-border";
 
-  const addedDate = trial.createdAt?.toDate
-    ? trial.createdAt.toDate()
-    : typeof trial.createdAt === "object" &&
-        "seconds" in trial.createdAt
-      ? new Date((trial.createdAt as { seconds: number }).seconds * 1000)
-      : null;
+  const addedDate = firestoreTimestampToDate(trial.createdAt);
 
   const hasSampleSize = trial.sampleSize && trial.sampleSize > 0;
   const hasSponsor = !!trial.sponsor;
