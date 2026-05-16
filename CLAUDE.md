@@ -88,7 +88,6 @@ Document fields:
 - Every API route needs try/catch with Zod validation and structured logging
 - Files in kebab-case: trial-card.tsx
 - Components in PascalCase: TrialCard
-- Keep files under 200 lines — split if longer
 - No inline styles — Tailwind classes only
 - Use CSS custom properties for brand colors, not hardcoded hex values
 - Form state consolidated into single useState object, not separate useState per field
