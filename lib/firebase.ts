@@ -1,4 +1,8 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
+// firebase/firestore/lite uses REST only — no gRPC, no realtime streams.
+// Better fit for our server-side API routes (no onSnapshot anywhere) and
+// fixes "Could not reach Cloud Firestore backend" errors that happen when
+// the full SDK's streaming transport is blocked by the network.
 import {
   getFirestore,
   collection,
@@ -13,7 +17,7 @@ import {
   query,
   where,
   limit,
-} from "firebase/firestore";
+} from "firebase/firestore/lite";
 import { Trial, UpdateTrialData } from "./types";
 import { logger } from "./logger";
 
