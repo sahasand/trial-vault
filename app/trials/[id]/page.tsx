@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { useTrialById } from "@/lib/hooks";
+import { useTrialById, trialFilterHref } from "@/lib/hooks";
 import { STATUS_STYLES, PHASE_COLORS, UNKNOWN_STATUS_STYLE } from "@/lib/constants";
-import { firestoreTimestampToDate, timeAgo } from "@/lib/utils";
+import { firestoreTimestampToDate, getSyncAge, timeAgo } from "@/lib/utils";
+import { ctgovStudyUrl } from "@/lib/ctgov";
 import ErrorBanner from "@/components/ui/error-banner";
 import {
   AlertDialog,
@@ -18,19 +19,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, RefreshCw, ExternalLink } from "lucide-react";
 
 function FieldRow({
   label,
   value,
   mono,
+  href,
 }: {
   label: string;
   value: string | number | undefined;
   mono?: boolean;
+  href?: string;
 }) {
-  const display =
-    value === undefined || value === "" || value === 0 ? "---" : String(value);
+  const isEmpty = value === undefined || value === "" || value === 0;
+  const display = isEmpty ? "---" : String(value);
 
   return (
     <div className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0">
@@ -40,9 +43,18 @@ function FieldRow({
       <dd
         className={`text-[15px] leading-relaxed ${
           mono ? "font-mono tracking-wider" : ""
-        } ${display === "---" ? "text-muted-foreground/50" : "text-foreground"}`}
+        } ${isEmpty ? "text-muted-foreground/50" : "text-foreground"}`}
       >
-        {display}
+        {!isEmpty && href ? (
+          <Link
+            href={href}
+            className="text-primary hover:underline underline-offset-2"
+          >
+            {display}
+          </Link>
+        ) : (
+          display
+        )}
       </dd>
     </div>
   );
@@ -130,17 +142,13 @@ export default function TrialDetailPage() {
     PHASE_COLORS[trial.phase] ?? PHASE_COLORS["N/A"];
 
   const syncDate = firestoreTimestampToDate(trial.lastSyncedAt);
-  const syncAgeDays = syncDate
-    ? (Date.now() - syncDate.getTime()) / 86_400_000
-    : null;
+  const sync = getSyncAge(trial.lastSyncedAt);
   const syncBadgeClass =
-    syncAgeDays === null
-      ? "text-muted-foreground"
-      : syncAgeDays > 90
-        ? "text-red-600"
-        : syncAgeDays > 30
-          ? "text-amber-600"
-          : "text-muted-foreground";
+    sync.severity === "stale"
+      ? "text-red-600"
+      : sync.severity === "aging"
+        ? "text-amber-600"
+        : "text-muted-foreground";
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
@@ -182,9 +190,15 @@ export default function TrialDetailPage() {
 
         {/* NCT ID */}
         {trial.nctId && (
-          <p className="mt-1.5 font-mono text-sm tracking-wider text-muted-foreground">
+          <a
+            href={ctgovStudyUrl(trial.nctId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1.5 inline-flex items-center gap-1 font-mono text-sm tracking-wider text-muted-foreground hover:text-primary transition-colors"
+          >
             {trial.nctId}
-          </p>
+            <ExternalLink className="size-3.5 opacity-60" />
+          </a>
         )}
 
         {/* Last synced badge */}
@@ -321,8 +335,24 @@ export default function TrialDetailPage() {
               label="Sample Size"
               value={trial.sampleSize ? trial.sampleSize.toLocaleString() : undefined}
             />
-            <FieldRow label="Indication" value={trial.indication} />
-            <FieldRow label="Sponsor" value={trial.sponsor} />
+            <FieldRow
+              label="Indication"
+              value={trial.indication}
+              href={
+                trial.indication
+                  ? trialFilterHref({ indication: trial.indication })
+                  : undefined
+              }
+            />
+            <FieldRow
+              label="Sponsor"
+              value={trial.sponsor}
+              href={
+                trial.sponsor
+                  ? trialFilterHref({ sponsor: trial.sponsor })
+                  : undefined
+              }
+            />
           </dl>
         </section>
 

@@ -1,5 +1,9 @@
 export const NCT_ID_PATTERN = /^NCT\d{8,11}$/i;
 
+export function ctgovStudyUrl(nctId: string): string {
+  return `https://clinicaltrials.gov/study/${nctId.toUpperCase()}`;
+}
+
 export interface CtgovTrialData {
   trialName: string;
   phase: string;

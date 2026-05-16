@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type Ref } from "react";
 import { Search, X } from "lucide-react";
 
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  inputRef?: Ref<HTMLInputElement>;
 }
 
 export default function SearchBar({
   value,
   onChange,
   placeholder = "Search by trial name or NCT ID...",
+  inputRef,
 }: SearchBarProps) {
   const [local, setLocal] = useState(value);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,6 +38,7 @@ export default function SearchBar({
     <div className="relative w-full">
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <input
+        ref={inputRef}
         type="text"
         value={local}
         onChange={(e) => handleChange(e.target.value)}

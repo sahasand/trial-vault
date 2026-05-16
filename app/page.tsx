@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Trial } from "@/lib/types";
 import TrialCard from "@/components/trials/trial-card";
 import TrialFilters from "@/components/trials/trial-filters";
 import SearchBar from "@/components/ui/search-bar";
 import ErrorBanner from "@/components/ui/error-banner";
-import { STATUS_STYLES, UNKNOWN_STATUS_STYLE } from "@/lib/constants";
-import { Plus, FlaskConical } from "lucide-react";
+import {
+  STATUS_STYLES,
+  UNKNOWN_STATUS_STYLE,
+} from "@/lib/constants";
+import { useTrialFilters, type SortValue } from "@/lib/hooks";
+import { firestoreTimestampToDate, trialsToCSV, downloadCSV } from "@/lib/utils";
+import { Plus, FlaskConical, Download } from "lucide-react";
 
 function SkeletonCard() {
   return (
@@ -25,13 +30,36 @@ function SkeletonCard() {
   );
 }
 
-export default function Home() {
+function sortTrials(trials: Trial[], sort: SortValue): Trial[] {
+  const copy = [...trials];
+  switch (sort) {
+    case "updated":
+      return copy.sort((a, b) => {
+        const ad = firestoreTimestampToDate(a.updatedAt)?.getTime() ?? 0;
+        const bd = firestoreTimestampToDate(b.updatedAt)?.getTime() ?? 0;
+        return bd - ad;
+      });
+    case "name":
+      return copy.sort((a, b) => a.trialName.localeCompare(b.trialName));
+    case "sample":
+      return copy.sort((a, b) => (b.sampleSize ?? 0) - (a.sampleSize ?? 0));
+    case "sponsor":
+      return copy.sort((a, b) =>
+        (a.sponsor ?? "").localeCompare(b.sponsor ?? "")
+      );
+    case "newest":
+    default:
+      // Firestore already returned createdAt desc; keep that order.
+      return copy;
+  }
+}
+
+function HomeContent() {
+  const { filters, setMany } = useTrialFilters();
   const [trials, setTrials] = useState<Trial[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [phase, setPhase] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function fetchTrials() {
@@ -49,6 +77,27 @@ export default function Home() {
     fetchTrials();
   }, []);
 
+  // `/` keyboard shortcut to focus search
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key !== "/") return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+      e.preventDefault();
+      searchRef.current?.focus();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
+
   // Count trials per status (from full dataset)
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -63,53 +112,75 @@ export default function Home() {
   const filtered = useMemo(() => {
     let result = trials;
 
-    if (search) {
-      const q = search.toLowerCase();
+    if (filters.q) {
+      const q = filters.q.toLowerCase();
       result = result.filter(
         (t) =>
           t.trialName.toLowerCase().includes(q) ||
           t.nctId.toLowerCase().includes(q)
       );
     }
-
-    if (phase) {
-      result = result.filter((t) => t.phase === phase);
+    if (filters.phase) {
+      result = result.filter((t) => t.phase === filters.phase);
+    }
+    if (filters.status) {
+      result = result.filter((t) => t.status === filters.status);
+    }
+    if (filters.sponsor) {
+      result = result.filter((t) => t.sponsor === filters.sponsor);
+    }
+    if (filters.indication) {
+      result = result.filter((t) => t.indication === filters.indication);
     }
 
-    if (statusFilter) {
-      result = result.filter((t) => t.status === statusFilter);
-    }
-
-    return result;
-  }, [trials, search, phase, statusFilter]);
-
-  function handlePhaseChange(val: string) {
-    setPhase(val === "all" ? "" : val);
-  }
+    return sortTrials(result, filters.sort);
+  }, [trials, filters]);
 
   function handleStatusClick(status: string) {
-    setStatusFilter((prev) => (prev === status ? "" : status));
+    setMany({ status: filters.status === status ? "" : status });
+  }
+
+  function handleExport() {
+    const csv = trialsToCSV(filtered);
+    const today = new Date().toISOString().slice(0, 10);
+    downloadCSV(`trialvault-export-${today}.csv`, csv);
   }
 
   // Ordered list of statuses that exist in data
   const STATUS_ORDER = ["Recruiting", "Active", "Completed", "Terminated", "Unknown"];
   const activeStatuses = STATUS_ORDER.filter((s) => statusCounts[s]);
 
+  const hasAnyFilter =
+    filters.q ||
+    filters.phase ||
+    filters.status ||
+    filters.sponsor ||
+    filters.indication;
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       {/* Search + Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
         <div className="flex-1">
-          <SearchBar value={search} onChange={setSearch} />
+          <SearchBar
+            value={filters.q}
+            onChange={(q) => setMany({ q })}
+            inputRef={searchRef}
+          />
         </div>
-        <TrialFilters phase={phase} onPhaseChange={handlePhaseChange} />
+        <TrialFilters
+          phase={filters.phase}
+          sponsor={filters.sponsor}
+          indication={filters.indication}
+          onChange={setMany}
+        />
       </div>
 
       {/* Status snapshot bar */}
       {!loading && !error && trials.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {activeStatuses.map((status) => {
-            const isActive = statusFilter === status;
+            const isActive = filters.status === status;
             const style = STATUS_STYLES[status] ?? UNKNOWN_STATUS_STYLE;
             return (
               <button
@@ -125,9 +196,21 @@ export default function Home() {
               </button>
             );
           })}
-          <span className="ml-auto text-sm text-muted-foreground">
-            {filtered.length} trial{filtered.length !== 1 ? "s" : ""}
-            {statusFilter || phase || search ? "" : " in database"}
+          <span className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
+            <span>
+              {filtered.length} trial{filtered.length !== 1 ? "s" : ""}
+              {hasAnyFilter ? "" : " in database"}
+            </span>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={filtered.length === 0}
+              title="Download filtered list as CSV"
+              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-[10px] border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Download className="size-3.5" />
+              Export CSV
+            </button>
           </span>
         </div>
       )}
@@ -179,5 +262,23 @@ export default function Home() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }
