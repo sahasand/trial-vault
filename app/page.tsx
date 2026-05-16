@@ -7,30 +7,8 @@ import TrialCard from "@/components/trials/trial-card";
 import TrialFilters from "@/components/trials/trial-filters";
 import SearchBar from "@/components/ui/search-bar";
 import ErrorBanner from "@/components/ui/error-banner";
+import { STATUS_STYLES, UNKNOWN_STATUS_STYLE } from "@/lib/constants";
 import { Plus, FlaskConical } from "lucide-react";
-
-const STATUS_PILL_STYLES: Record<string, { active: string; inactive: string }> = {
-  Recruiting: {
-    active: "bg-emerald-600 text-white border-emerald-600",
-    inactive: "bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50",
-  },
-  Active: {
-    active: "bg-blue-600 text-white border-blue-600",
-    inactive: "bg-white text-blue-700 border-blue-300 hover:bg-blue-50",
-  },
-  Completed: {
-    active: "bg-gray-500 text-white border-gray-500",
-    inactive: "bg-white text-gray-600 border-gray-300 hover:bg-gray-50",
-  },
-  Terminated: {
-    active: "bg-red-600 text-white border-red-600",
-    inactive: "bg-white text-red-700 border-red-300 hover:bg-red-50",
-  },
-  Unknown: {
-    active: "bg-amber-500 text-white border-amber-500",
-    inactive: "bg-white text-amber-700 border-amber-300 hover:bg-amber-50",
-  },
-};
 
 function SkeletonCard() {
   return (
@@ -132,14 +110,14 @@ export default function Home() {
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {activeStatuses.map((status) => {
             const isActive = statusFilter === status;
-            const styles = STATUS_PILL_STYLES[status] ?? STATUS_PILL_STYLES["Unknown"];
+            const style = STATUS_STYLES[status] ?? UNKNOWN_STATUS_STYLE;
             return (
               <button
                 key={status}
                 type="button"
                 onClick={() => handleStatusClick(status)}
                 className={`inline-flex items-center gap-1.5 rounded-[10px] border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${
-                  isActive ? styles.active : styles.inactive
+                  isActive ? style.pillActive : style.pillInactive
                 }`}
               >
                 {status}:

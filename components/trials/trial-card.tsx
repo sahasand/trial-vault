@@ -2,43 +2,18 @@
 
 import Link from "next/link";
 import type { Trial } from "@/lib/types";
-import { STATUS_COLORS } from "@/lib/constants";
+import { STATUS_STYLES, UNKNOWN_STATUS_STYLE } from "@/lib/constants";
 import { firestoreTimestampToDate, timeAgo } from "@/lib/utils";
-import {
-  Users,
-  Building2,
-  Target,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  HelpCircle,
-} from "lucide-react";
-
-const STATUS_ICONS: Record<string, typeof Users> = {
-  Recruiting: Users,
-  Active: Clock,
-  Completed: CheckCircle2,
-  Terminated: XCircle,
-  Unknown: HelpCircle,
-};
-
-const STATUS_ACCENT: Record<string, string> = {
-  Recruiting: "border-l-emerald-500",
-  Active: "border-l-blue-500",
-  Completed: "border-l-gray-400",
-  Terminated: "border-l-red-500",
-  Unknown: "border-l-amber-500",
-};
+import { Users, Building2, Target } from "lucide-react";
 
 interface TrialCardProps {
   trial: Trial;
 }
 
 export default function TrialCard({ trial }: TrialCardProps) {
-  const statusColor = STATUS_COLORS[trial.status] ?? STATUS_COLORS["Unknown"];
-  const StatusIcon = STATUS_ICONS[trial.status] ?? HelpCircle;
-  const accentColor =
-    STATUS_ACCENT[trial.status] ?? "border-l-border";
+  const style = STATUS_STYLES[trial.status] ?? UNKNOWN_STATUS_STYLE;
+  const StatusIcon = style.icon;
+  const accentColor = trial.status ? style.accent : "border-l-border";
 
   const addedDate = firestoreTimestampToDate(trial.createdAt);
 
@@ -68,7 +43,7 @@ export default function TrialCard({ trial }: TrialCardProps) {
             )}
             {trial.status && (
               <span
-                className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusColor}`}
+                className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${style.badge}`}
               >
                 <StatusIcon className="size-3" />
                 {trial.status}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTrialById, syncTrial } from "@/lib/firebase";
 import { mapCtgovToTrial } from "@/lib/ctgov";
 import { logger } from "@/lib/logger";
+import type { UpdateTrialData } from "@/lib/types";
 
 export async function POST(
   _request: NextRequest,
@@ -48,17 +49,19 @@ export async function POST(
 
     const ctgov = mapCtgovToTrial(await res.json());
 
-    // Overwrite CT.gov-sourced fields; preserve trialName (user's display name)
-    // and notes (user-only).
-    await syncTrial(params.id, {
-      officialTitle: ctgov.trialName,
-      phase: ctgov.phase,
-      sampleSize: ctgov.sampleSize,
-      indication: ctgov.indication,
-      sponsor: ctgov.sponsor,
-      primaryEndpoint: ctgov.primaryEndpoint,
-      status: ctgov.status,
-    });
+    // Overwrite CT.gov-sourced fields with whatever the API returned —
+    // but skip empties so a missing field doesn't wipe existing data.
+    // trialName (user's display name) and notes (user-only) are never touched.
+    const updates: UpdateTrialData = {};
+    if (ctgov.trialName) updates.officialTitle = ctgov.trialName;
+    if (ctgov.phase) updates.phase = ctgov.phase;
+    if (ctgov.sampleSize > 0) updates.sampleSize = ctgov.sampleSize;
+    if (ctgov.indication) updates.indication = ctgov.indication;
+    if (ctgov.sponsor) updates.sponsor = ctgov.sponsor;
+    if (ctgov.primaryEndpoint) updates.primaryEndpoint = ctgov.primaryEndpoint;
+    if (ctgov.status) updates.status = ctgov.status;
+
+    await syncTrial(params.id, updates);
 
     const updated = await getTrialById(params.id);
     return NextResponse.json(updated);

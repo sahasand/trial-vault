@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createTrial, getAllTrials } from "@/lib/firebase";
+import { createTrial, getAllTrials, DuplicateNctIdError } from "@/lib/firebase";
 import { createTrialSchema } from "@/lib/schemas";
 import { logger } from "@/lib/logger";
 import { ZodError } from "zod";
@@ -30,6 +30,9 @@ export async function POST(request: NextRequest) {
         { error: error.issues[0].message },
         { status: 400 }
       );
+    }
+    if (error instanceof DuplicateNctIdError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
     logger.error("POST /api/trials error", error);
     return NextResponse.json(

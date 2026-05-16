@@ -11,9 +11,18 @@ import {
   serverTimestamp,
   orderBy,
   query,
+  where,
+  limit,
 } from "firebase/firestore";
 import { Trial, UpdateTrialData } from "./types";
 import { logger } from "./logger";
+
+export class DuplicateNctIdError extends Error {
+  constructor(public nctId: string) {
+    super(`A trial with NCT ID ${nctId} already exists.`);
+    this.name = "DuplicateNctIdError";
+  }
+}
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -28,6 +37,22 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const TRIALS_COLLECTION = "trials";
+
+// Best-effort uniqueness check. Two concurrent creates with the same NCT ID
+// can still both succeed (no Firestore-side unique index). Acceptable for V1.
+async function findExistingTrialIdByNctId(
+  nctId: string,
+  excludeId?: string
+): Promise<string | null> {
+  const q = query(
+    collection(db, TRIALS_COLLECTION),
+    where("nctId", "==", nctId),
+    limit(2)
+  );
+  const snapshot = await getDocs(q);
+  const match = snapshot.docs.find((d) => d.id !== excludeId);
+  return match?.id ?? null;
+}
 
 export async function getAllTrials(): Promise<Trial[]> {
   try {
@@ -62,6 +87,13 @@ export async function createTrial(
   data: Omit<Trial, "id" | "createdAt" | "updatedAt" | "lastSyncedAt">
 ): Promise<string> {
   try {
+    if (data.nctId) {
+      const existingId = await findExistingTrialIdByNctId(data.nctId);
+      if (existingId) {
+        throw new DuplicateNctIdError(data.nctId);
+      }
+    }
+
     const payload: Record<string, unknown> = {
       ...data,
       createdAt: serverTimestamp(),
@@ -75,6 +107,7 @@ export async function createTrial(
     const docRef = await addDoc(collection(db, TRIALS_COLLECTION), payload);
     return docRef.id;
   } catch (error) {
+    if (error instanceof DuplicateNctIdError) throw error;
     logger.error("Error creating trial", error);
     throw error;
   }
@@ -85,12 +118,20 @@ export async function updateTrial(
   data: UpdateTrialData
 ): Promise<void> {
   try {
+    if (data.nctId) {
+      const conflictId = await findExistingTrialIdByNctId(data.nctId, id);
+      if (conflictId) {
+        throw new DuplicateNctIdError(data.nctId);
+      }
+    }
+
     const docRef = doc(db, TRIALS_COLLECTION, id);
     await updateDoc(docRef, {
       ...data,
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
+    if (error instanceof DuplicateNctIdError) throw error;
     logger.error("Error updating trial", error);
     throw error;
   }

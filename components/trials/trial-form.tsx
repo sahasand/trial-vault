@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import type { Trial } from "@/lib/types";
-import { PHASES, STATUSES } from "@/lib/constants";
+import { PHASES, STATUSES, STATUS_STYLES } from "@/lib/constants";
 import {
   NCT_ID_PATTERN,
   type CtgovTrialData,
@@ -256,14 +256,6 @@ export default function TrialForm({
   const field =
     "min-h-[44px] rounded-[10px] focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/20";
 
-  const STATUS_DOT: Record<string, string> = {
-    Recruiting: "text-emerald-600",
-    Active: "text-blue-600",
-    Completed: "text-gray-500",
-    Terminated: "text-red-600",
-    Unknown: "text-amber-600",
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && <ErrorBanner message={error} />}
@@ -345,7 +337,8 @@ export default function TrialForm({
                         <span>·</span>
                         <span
                           className={
-                            STATUS_DOT[result.status] ?? "text-muted-foreground"
+                            STATUS_STYLES[result.status]?.dot ??
+                            "text-muted-foreground"
                           }
                         >
                           {result.status}

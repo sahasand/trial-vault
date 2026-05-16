@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useTrialById } from "@/lib/hooks";
-import { STATUS_COLORS, PHASE_COLORS } from "@/lib/constants";
+import { STATUS_STYLES, PHASE_COLORS, UNKNOWN_STATUS_STYLE } from "@/lib/constants";
 import { firestoreTimestampToDate, timeAgo } from "@/lib/utils";
 import ErrorBanner from "@/components/ui/error-banner";
 import {
@@ -125,7 +125,7 @@ export default function TrialDetailPage() {
   if (!trial) return null;
 
   const statusColor =
-    STATUS_COLORS[trial.status] ?? STATUS_COLORS["Unknown"];
+    (STATUS_STYLES[trial.status] ?? UNKNOWN_STATUS_STYLE).badge;
   const phaseColor =
     PHASE_COLORS[trial.phase] ?? PHASE_COLORS["N/A"];
 
